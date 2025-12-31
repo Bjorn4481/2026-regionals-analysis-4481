@@ -3,7 +3,7 @@ print("Generating team list from event codes...")
 import requests
 import pandas as pd
 import sys
-from config import TBA_API_KEY, TBA_BASE_URL, EVENTS, validate_config
+from config import TBA_API_KEY, TBA_BASE_URL, EVENTS, REQUEST_TIMEOUT, validate_config
 
 # Validate configuration
 config_errors = validate_config()
@@ -20,6 +20,10 @@ event_codes = list(EVENTS.keys())
 team_numbers = []
 event_codes_list = []
 
+# Track event processing
+successful_events = []
+failed_events = []
+
 headers = {"X-TBA-Auth-Key": TBA_API_KEY}
 
 # Fetch teams for each event
@@ -28,13 +32,14 @@ for event_code in event_codes:
     
     try:
         # Get teams for this event
-        response = requests.get(f"{TBA_BASE_URL}/event/{event_code}/teams/simple", headers=headers, timeout=10)
+        response = requests.get(f"{TBA_BASE_URL}/event/{event_code}/teams/simple", headers=headers, timeout=REQUEST_TIMEOUT)
         
         if response.status_code == 401:
             print(f"❌ Error: Invalid TBA API key. Please check your API key in config.py")
             sys.exit(1)
         elif response.status_code == 404:
             print(f"⚠️ Warning: Event '{event_code}' not found. It may not exist yet or the code is incorrect.")
+            failed_events.append((event_code, "Not found (404)"))
             continue
         elif response.status_code == 429:
             print(f"❌ Error: Rate limit exceeded. Please wait a few minutes and try again.")
@@ -44,9 +49,11 @@ for event_code in event_codes:
             
             if not teams:
                 print(f"⚠️ Warning: No teams found for event '{event_code}'")
+                failed_events.append((event_code, "No teams"))
                 continue
                 
             print(f"Found {len(teams)} teams for {event_code}")
+            successful_events.append((event_code, len(teams)))
             
             for team in teams:
                 team_number = team['team_number']
@@ -54,6 +61,7 @@ for event_code in event_codes:
                 event_codes_list.append(event_code)
         else:
             print(f"⚠️ Warning: Unexpected status code {response.status_code} for event {event_code}")
+            failed_events.append((event_code, f"Status {response.status_code}"))
             continue
     except requests.exceptions.Timeout:
         print(f"❌ Error: Request timeout for event {event_code}. Check your internet connection.")
@@ -84,6 +92,17 @@ try:
     teams_df.to_csv(output_file, index=False)
     print(f"\n✅ Saved {len(teams_df)} team entries to {output_file}")
     print(f"Unique teams: {teams_df['team_nr'].nunique()}")
+    
+    # Print summary
+    if successful_events:
+        print(f"\n📊 Successfully fetched {len(successful_events)} event(s):")
+        for event_code, team_count in successful_events:
+            print(f"  • {event_code}: {team_count} teams")
+    
+    if failed_events:
+        print(f"\n⚠️  Failed to fetch {len(failed_events)} event(s):")
+        for event_code, reason in failed_events:
+            print(f"  • {event_code}: {reason}")
 except Exception as e:
     print(f"❌ Error saving to {output_file}: {str(e)}")
     sys.exit(1)

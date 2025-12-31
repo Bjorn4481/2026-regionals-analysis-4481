@@ -1,8 +1,12 @@
 # Configuration file for event analysis
 
 # Blue Alliance API credentials
+# Get your API key from: https://www.thebluealliance.com/account
 TBA_API_KEY = "YOUR_API_KEY_HERE"
 TBA_BASE_URL = "https://www.thebluealliance.com/api/v3"
+
+# API request timeout in seconds (adjust for slower connections)
+REQUEST_TIMEOUT = 10
 
 # Event codes to analyze with their display names
 # Update this dictionary to change which events you want to analyze
@@ -18,8 +22,14 @@ EVENT_YEAR = "2026"
 REFERENCE_YEAR = 2025
 
 # X% Rule Configuration
-# Estimated maximum points the best robot in the world will score on average (100% reference)
-MAX_POINTS_ESTIMATE = 120  # Adjust this based on your team's analysis
+# Estimated maximum match score used as the 100% reference for the X% Rule.
+# Derive this from your game analysis:
+#   - Study the game manual for scoring opportunities
+#   - Calculate realistic cycle times for game pieces
+#   - Factor in endgame/bonus scoring potential
+#   - Consider world-class driver performance, not lucky outliers
+# This should represent what the BEST robot will score on AVERAGE, not a single lucky match.
+MAX_POINTS_ESTIMATE = 130
 
 # Reference percentages to display on plots
 REFERENCE_PERCENTAGES = [50, 60, 70]  # e.g., 50%, 60%, 70% of max

@@ -14,10 +14,22 @@ def run_script(script_name, description):
     print(f"STEP: {description}")
     print(f"{'='*60}\n")
     
-    result = subprocess.run([sys.executable, script_name], capture_output=False)
+    result = subprocess.run(
+        [sys.executable, script_name],
+        capture_output=True,
+        text=True,
+    )
+    
+    # Print any standard output from the script so users still see progress
+    if result.stdout:
+        print(result.stdout, end="")
     
     if result.returncode != 0:
         print(f"\n❌ Error running {script_name}")
+        # Include captured output to aid debugging
+        if result.stderr:
+            print("\n--- Error Output ---")
+            print(result.stderr, end="")
         sys.exit(1)
     
     print(f"\n✅ Completed: {description}")

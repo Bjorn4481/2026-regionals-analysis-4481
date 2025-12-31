@@ -9,7 +9,7 @@ sb = statbotics.Statbotics()
 
 import requests
 import pandas as pd
-from config import TBA_API_KEY, TBA_BASE_URL, EVENTS, REFERENCE_YEAR, validate_config
+from config import TBA_API_KEY, TBA_BASE_URL, EVENTS, REFERENCE_YEAR, REQUEST_TIMEOUT, validate_config
 
 # Validate configuration
 config_errors = validate_config()
@@ -49,7 +49,7 @@ countries = []
 for _, row in teams_df.iterrows():
     team_number = row['team_nr']
     try:
-        response = requests.get(f"{TBA_BASE_URL}/team/frc{team_number}", headers=headers, timeout=10)
+        response = requests.get(f"{TBA_BASE_URL}/team/frc{team_number}", headers=headers, timeout=REQUEST_TIMEOUT)
         
         if response.status_code == 401:
             print(f"❌ Error: Invalid TBA API key")
@@ -66,7 +66,7 @@ for _, row in teams_df.iterrows():
         nicknames.append('Unknown')
         countries.append('Unknown')
     except Exception as e:
-        print(f"⚠️ Warning: Error fetching team {team_number}: {str(e)}")
+        print(f"⚠️ Warning: Error fetching team {team_number} [{type(e).__name__}]: {str(e)}")
         nicknames.append('Unknown')
         countries.append('Unknown')
 
@@ -91,6 +91,7 @@ for _, row in teams_df.iterrows():
         max_stats.append(epa_stats.get('max', float('nan')))
     except Exception as e:
         # Handle cases where the API call fails
+        print(f"⚠️ Warning: Could not fetch Statbotics data for team {team_number} [{type(e).__name__}]")
         start_stats.append(float('nan'))
         pre_champs_stats.append(float('nan'))
         max_stats.append(float('nan'))
