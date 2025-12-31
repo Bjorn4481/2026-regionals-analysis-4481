@@ -22,9 +22,9 @@ pip install -r requirements.txt
 
 ### 2. Configure
 Edit `config.py` to set:
+- **`TBA_API_KEY`**: Your Blue Alliance API key
 - **`EVENTS`**: Dictionary of event codes and display names
 - **`EVENT_YEAR`**: Year prefix for event codes (e.g., "2026")
-- **`TBA_API_KEY`**: Your Blue Alliance API key
 - **`REFERENCE_YEAR`**: Year to use for historical team data (e.g., 2025)
 - **`MAX_POINTS_ESTIMATE`**: Estimated average max points for the best robot (100% reference)
 - **`REFERENCE_PERCENTAGES`**: Performance target percentages to display on plots
