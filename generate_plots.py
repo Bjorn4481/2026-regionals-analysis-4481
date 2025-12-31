@@ -1,6 +1,17 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+import sys
+import os
+from config import EVENTS, MAX_POINTS_ESTIMATE, REFERENCE_PERCENTAGES, EVENT_YEAR, validate_config
+
+# Validate configuration
+config_errors = validate_config()
+if config_errors:
+    print("❌ Configuration errors:")
+    for error in config_errors:
+        print(f"  - {error}")
+    sys.exit(1)
 
 # === CONFIGURATION ===
 DATA_PATH = "teams_with_stats.csv"   # path to your dataset
@@ -8,20 +19,29 @@ TOP_N = 16                           # number of top teams per event
 BUBBLE_SIZE_SCALE = 10               # bubble size multiplier
 OUTPUT_DIR = "."                     # folder for saving images
 
-# Reference line configuration
-REFERENCE_LINES = {
-    "70%": 90,
-    "60%": 90 * 0.6 / 0.7,  # ≈77.14
-    "50%": 90 * 0.5 / 0.7   # ≈64.29
-}
+# Calculate reference lines based on max points estimate
+REFERENCE_LINES = {f"{pct}%": MAX_POINTS_ESTIMATE * pct / 100 for pct in REFERENCE_PERCENTAGES}
 
 # === LOAD AND PREPARE DATA ===
-df = pd.read_csv(DATA_PATH)
+if not os.path.exists(DATA_PATH):
+    print(f"❌ Error: {DATA_PATH} not found. Run collect_data.py first.")
+    sys.exit(1)
+
+try:
+    df = pd.read_csv(DATA_PATH)
+    if df.empty:
+        print(f"❌ Error: {DATA_PATH} is empty.")
+        sys.exit(1)
+except Exception as e:
+    print(f"❌ Error reading {DATA_PATH}: {str(e)}")
+    sys.exit(1)
+
 df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
 
 # Identify event columns (e.g. 2026tuis, 2026tuis4)
-event_cols = [c for c in df.columns if "2026" in c]
-event_map = {c: ("Istanbul Regional" if "tuis4" not in c else "Yeditepe Regional") for c in event_cols}
+event_cols = [c for c in df.columns if EVENT_YEAR in c]
+# Use event names from config
+event_map = {c: EVENTS.get(c, c) for c in event_cols}
 
 # Convert relevant columns to numeric
 for col in ["epa_auto_points", "epa_teleop_points", "epa_endgame_points", "epa_total_points", "opr_first_event"]:

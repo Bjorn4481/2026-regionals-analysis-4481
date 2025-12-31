@@ -1,22 +1,44 @@
 print("Starting data collection...")
 
+import sys
+import os
+
 # Statbotics API
 import statbotics
 sb = statbotics.Statbotics()
 
-# Blue Alliance API
-TBA_API_KEY = "YOUR_TBA_API_KEY_HERE"
-TBA_BASE_URL = "https://www.thebluealliance.com/api/v3"
-
 import requests
+import pandas as pd
+from config import TBA_API_KEY, TBA_BASE_URL, EVENTS, REFERENCE_YEAR, validate_config
+
+# Validate configuration
+config_errors = validate_config()
+if config_errors:
+    print("❌ Configuration errors:")
+    for error in config_errors:
+        print(f"  - {error}")
+    sys.exit(1)
+
 # Fetch data for the same team using TBA
 headers = {"X-TBA-Auth-Key": TBA_API_KEY}
 
 print("Importing list_of_teams.csv...")
 
-# Import list_of_teams.csv (this csv was hand-crafted)
-import pandas as pd
-teams_df = pd.read_csv("list_of_teams.csv")
+# Check if file exists
+if not os.path.exists("list_of_teams.csv"):
+    print("❌ Error: list_of_teams.csv not found. Run generate_team_list.py first.")
+    sys.exit(1)
+
+# Import list_of_teams.csv
+try:
+    teams_df = pd.read_csv("list_of_teams.csv")
+    if teams_df.empty:
+        print("❌ Error: list_of_teams.csv is empty.")
+        sys.exit(1)
+    print(f"Loaded {len(teams_df)} team entries")
+except Exception as e:
+    print(f"❌ Error reading list_of_teams.csv: {str(e)}")
+    sys.exit(1)
 
 print("Collecting team data from TBA and Statbotics APIs...")
 
@@ -26,13 +48,25 @@ countries = []
 
 for _, row in teams_df.iterrows():
     team_number = row['team_nr']
-    response = requests.get(f"{TBA_BASE_URL}/team/frc{team_number}", headers=headers)
-    
-    if response.status_code == 200:
-        team_data = response.json()
-        nicknames.append(team_data.get('nickname', 'Unknown'))
-        countries.append(team_data.get('country', 'Unknown'))
-    else:
+    try:
+        response = requests.get(f"{TBA_BASE_URL}/team/frc{team_number}", headers=headers, timeout=10)
+        
+        if response.status_code == 401:
+            print(f"❌ Error: Invalid TBA API key")
+            sys.exit(1)
+        elif response.status_code == 200:
+            team_data = response.json()
+            nicknames.append(team_data.get('nickname', 'Unknown'))
+            countries.append(team_data.get('country', 'Unknown'))
+        else:
+            nicknames.append('Unknown')
+            countries.append('Unknown')
+    except requests.exceptions.Timeout:
+        print(f"⚠️ Warning: Timeout fetching data for team {team_number}")
+        nicknames.append('Unknown')
+        countries.append('Unknown')
+    except Exception as e:
+        print(f"⚠️ Warning: Error fetching team {team_number}: {str(e)}")
         nicknames.append('Unknown')
         countries.append('Unknown')
 
@@ -50,7 +84,7 @@ for _, row in teams_df.iterrows():
     team_number = row['team_nr']
     try:
         # Fetch stats for the team using Statbotics API
-        team_stats = sb.get_team_year(team_number, 2025)
+        team_stats = sb.get_team_year(team_number, REFERENCE_YEAR)
         epa_stats = team_stats.get('epa', {}).get('stats', {})
         start_stats.append(epa_stats.get('start', float('nan')))
         pre_champs_stats.append(epa_stats.get('pre_champs', float('nan')))
@@ -67,15 +101,15 @@ teams_df['start_stats'] = start_stats
 teams_df['pre_champs_stats'] = pre_champs_stats
 teams_df['max_stats'] = max_stats
 
-# Add binary columns for event codes
-teams_df['2026tuis'] = (teams_df['event_code'] == '2026tuis').astype(int)
-teams_df['2026tuis4'] = (teams_df['event_code'] == '2026tuis4').astype(int)
+# Add binary columns for event codes (dynamically based on config)
+for event_code in EVENTS.keys():
+    teams_df[event_code] = (teams_df['event_code'] == event_code).astype(int)
 
 # Drop the original event_code column
 teams_df.drop(columns=['event_code'], inplace=True)
 
 # Merge duplicate team_nr entries by summing only the binary columns
-binary_columns = ['2026tuis', '2026tuis4']
+binary_columns = list(EVENTS.keys())
 teams_df = teams_df.groupby('team_nr', as_index=False).agg(
     {**{col: 'sum' for col in binary_columns}, **{col: 'first' for col in teams_df.columns if col not in binary_columns + ['team_nr']}}
 )
@@ -90,10 +124,8 @@ opr_first_event = []
 list_of_team_numbers = teams_df['team_nr'].tolist()
 
 for team_number in list_of_team_numbers:
-    year = 2025  # Last year
-
-    # Fetch events for the team
-    events_url = f"{TBA_BASE_URL}/team/frc{team_number}/events/{year}"
+    # Fetch events for the team from reference year
+    events_url = f"{TBA_BASE_URL}/team/frc{team_number}/events/{REFERENCE_YEAR}"
     events_response = requests.get(events_url, headers=headers)
 
     if events_response.status_code == 200:
