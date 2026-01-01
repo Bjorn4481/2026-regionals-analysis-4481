@@ -8,7 +8,7 @@ from config import EVENTS, MAX_POINTS_ESTIMATE, REFERENCE_PERCENTAGES, EVENT_YEA
 # Validate configuration
 config_errors = validate_config()
 if config_errors:
-    print("❌ Configuration errors:")
+    print("[ERROR] Configuration errors:")
     for error in config_errors:
         print(f"  - {error}")
     sys.exit(1)
@@ -24,16 +24,16 @@ REFERENCE_LINES = {f"{pct}%": MAX_POINTS_ESTIMATE * pct / 100 for pct in REFEREN
 
 # === LOAD AND PREPARE DATA ===
 if not os.path.exists(DATA_PATH):
-    print(f"❌ Error: {DATA_PATH} not found. Run collect_data.py first.")
+    print(f"[ERROR] {DATA_PATH} not found. Run collect_data.py first.")
     sys.exit(1)
 
 try:
     df = pd.read_csv(DATA_PATH)
     if df.empty:
-        print(f"❌ Error: {DATA_PATH} is empty.")
+        print(f"[ERROR] {DATA_PATH} is empty.")
         sys.exit(1)
 except Exception as e:
-    print(f"❌ Error reading {DATA_PATH}: {str(e)}")
+    print(f"[ERROR] Error reading {DATA_PATH}: {str(e)}")
     sys.exit(1)
 
 df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
@@ -70,7 +70,7 @@ for event_col, event_name in event_map.items():
 
     sub = df[df[event_col] == 1].copy()
     if sub.empty:
-        print(f"⚠️ No data for {event_name}")
+        print(f"[WARNING] No data for {event_name}")
         continue
 
     # Sort and get top N teams
@@ -129,4 +129,4 @@ for event_col, event_name in event_map.items():
     plt.savefig(f"{OUTPUT_DIR}/bar_top{TOP_N}_{event_col}.png", dpi=160)
     plt.close()
 
-print("✅ Plots generated for all events (with 50/60/70% reference lines)!")
+print("[SUCCESS] Plots generated for all events!")

@@ -25,14 +25,14 @@ def run_script(script_name, description):
         print(result.stdout, end="")
     
     if result.returncode != 0:
-        print(f"\n❌ Error running {script_name}")
+        print(f"\n[ERROR] Error running {script_name}")
         # Include captured output to aid debugging
         if result.stderr:
             print("\n--- Error Output ---")
             print(result.stderr, end="")
         sys.exit(1)
     
-    print(f"\n✅ Completed: {description}")
+    print(f"\n[SUCCESS] Completed: {description}")
 
 def main():
     print("Starting complete analysis pipeline...")
@@ -48,7 +48,7 @@ def main():
     run_script("generate_plots.py", "Generate analysis plots")
     
     print("\n" + "="*60)
-    print("🎉 COMPLETE! All steps finished successfully.")
+    print("[SUCCESS] COMPLETE! All steps finished successfully.")
     print("="*60)
 
 if __name__ == "__main__":

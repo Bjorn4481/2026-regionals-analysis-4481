@@ -14,7 +14,7 @@ from config import TBA_API_KEY, TBA_BASE_URL, EVENTS, REFERENCE_YEAR, REQUEST_TI
 # Validate configuration
 config_errors = validate_config()
 if config_errors:
-    print("❌ Configuration errors:")
+    print("[ERROR] Configuration errors:")
     for error in config_errors:
         print(f"  - {error}")
     sys.exit(1)
@@ -26,18 +26,18 @@ print("Importing list_of_teams.csv...")
 
 # Check if file exists
 if not os.path.exists("list_of_teams.csv"):
-    print("❌ Error: list_of_teams.csv not found. Run generate_team_list.py first.")
+    print("[ERROR] list_of_teams.csv not found. Run generate_team_list.py first.")
     sys.exit(1)
 
 # Import list_of_teams.csv
 try:
     teams_df = pd.read_csv("list_of_teams.csv")
     if teams_df.empty:
-        print("❌ Error: list_of_teams.csv is empty.")
+        print("[ERROR] list_of_teams.csv is empty.")
         sys.exit(1)
     print(f"Loaded {len(teams_df)} team entries")
 except Exception as e:
-    print(f"❌ Error reading list_of_teams.csv: {str(e)}")
+    print(f"[ERROR] Error reading list_of_teams.csv: {str(e)}")
     sys.exit(1)
 
 print("Collecting team data from TBA and Statbotics APIs...")
@@ -52,7 +52,7 @@ for _, row in teams_df.iterrows():
         response = requests.get(f"{TBA_BASE_URL}/team/frc{team_number}", headers=headers, timeout=REQUEST_TIMEOUT)
         
         if response.status_code == 401:
-            print(f"❌ Error: Invalid TBA API key")
+            print(f"[ERROR] Invalid TBA API key")
             sys.exit(1)
         elif response.status_code == 200:
             team_data = response.json()
@@ -62,11 +62,11 @@ for _, row in teams_df.iterrows():
             nicknames.append('Unknown')
             countries.append('Unknown')
     except requests.exceptions.Timeout:
-        print(f"⚠️ Warning: Timeout fetching data for team {team_number}")
+        print(f"[WARNING] Timeout fetching data for team {team_number}")
         nicknames.append('Unknown')
         countries.append('Unknown')
     except Exception as e:
-        print(f"⚠️ Warning: Error fetching team {team_number} [{type(e).__name__}]: {str(e)}")
+        print(f"[WARNING] Error fetching team {team_number} [{type(e).__name__}]: {str(e)}")
         nicknames.append('Unknown')
         countries.append('Unknown')
 
@@ -91,7 +91,7 @@ for _, row in teams_df.iterrows():
         max_stats.append(epa_stats.get('max', float('nan')))
     except Exception as e:
         # Handle cases where the API call fails
-        print(f"⚠️ Warning: Could not fetch Statbotics data for team {team_number} [{type(e).__name__}]")
+        print(f"[WARNING] Could not fetch Statbotics data for team {team_number} [{type(e).__name__}]")
         start_stats.append(float('nan'))
         pre_champs_stats.append(float('nan'))
         max_stats.append(float('nan'))
